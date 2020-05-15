@@ -1,0 +1,74 @@
+version: "3"
+services:
+  # Database, sgared between strapi and core API
+  mongodb:
+    image: mongo:4.2.6-bionic
+    container_name: wysiblocks_mongodb
+    restart: unless-stopped
+    command: mongod --auth
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=user_stories
+      - MONGO_INITDB_ROOT_PASSWORD=user_stories_root
+      - MONGODB_DATA_DIR=/data/db
+      - MONGODB_LOG_DIR=/dev/null
+    volumes:
+      - mongodbdata:/data/db
+    networks:
+      - backend
+    # This is only required for connecting to the remote db from another origin
+    # ports:
+    #   - 27017:27017
+
+  # A GUI for MongoDB
+  mongo-express:
+    image: mongo-express
+    container_name: wysiblocks_mongo_express
+    restart: unless-stopped
+    environment:
+      - ME_CONFIG_MONGODB_ENABLE_ADMIN=true
+      - ME_CONFIG_BASICAUTH_USERNAME=user_stories
+      - ME_CONFIG_BASICAUTH_PASSWORD=user_stories_mongo_express
+      - ME_CONFIG_MONGODB_ADMINUSERNAME=user_stories
+      - ME_CONFIG_MONGODB_ADMINPASSWORD=user_stories_root
+      - ME_CONFIG_MONGODB_PORT=27017
+      - ME_CONFIG_MONGODB_SERVER=wysiblocks_mongodb
+      - ME_CONFIG_OPTIONS_EDITORTHEME=ambiance
+    ports:
+      - 8081:8081
+    depends_on:
+      - mongodb
+    networks:
+      - backend
+
+  # Open source Headless CMS with customizable APIs
+  strapi_cms:
+    container_name: wysiblocks_strapi_cms
+    restart: unless-stopped
+    depends_on:
+      - mongodb
+    image: denisnv/wysiblocks_strapi_cms:latest
+    volumes:
+      - strapi_public:/app/public/
+    ports:
+      - "1337:1337"
+    environment:
+      - DATABASE_HOST=mongodb
+      - DATABASE_PORT=27017
+      - DATABASE_NAME=strapi_cms
+      - DATABASE_USERNAME=strapi
+      - DATABASE_PASSWORD=user_stories_strapi
+      - AUTHENTICATION_DATABASE=strapi_cms
+    networks:
+      - backend
+
+networks:
+  # frontend:
+  #   driver: bridge
+  backend:
+    driver: bridge
+
+volumes:
+  mongodbdata:
+    driver: local
+  strapi_public:
+    driver: local
