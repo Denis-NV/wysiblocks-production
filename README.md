@@ -1,14 +1,14 @@
 # wysiblocks-production
 
-## Export DB and strapi public data from dev
-
-### DB
+## Backup dev data / assets if you wish to transfer them to production
 
 Make sure full dev container stack is up and running. To make sure it does and double check by running
 
 ```
 $ doccker ps
 ```
+
+### DB
 
 Attach to mongodb container, dump the entire datapase into a folder inside the container and copy it to the host
 
@@ -21,19 +21,35 @@ $ docker cp wysiblocks_mongodb:/mongo_dump .
 
 ```
 
+### DB strapi public data
+
 Copy public assets strapi folder to the host
 
 ```
-$ docker cp wysiblocks_strapi_cms:/app/public .
+$ docker cp wysiblocks_strapi_cms:/app/public .\strapi
 ```
 
-## import DB and strapi public data to production
+### Keycloak
+
+Export Keycloak Realm
+
+```
+$ docker exec -it wysiblocks_keycloak /opt/jboss/keycloak/bin/standalone.sh -Djboss.socket.binding.port-offset=100 -Dkeycloak.migration.action=export -Dkeycloak.migration.provider=singleFile -Dkeycloak.migration.realmName=wysiblocks -Dkeycloak.migration.usersExportStrategy=REALM_FILE -Dkeycloak.migration.file=/tmp/wysiblocks_realm.json
+
+$ Ctrl+C
+
+$ docker cp wysiblocks_keycloak:/tmp/wysiblocks_realm.json ./keycloak_exports/wysiblocks_realm.json
+```
+
+## Run production stack and import backed-up data and assets into production
 
 Make sure the dev stack is stopped, if your are in your local environment (doesn't apply to remote server). To ensure run
 
 ```
 $ docker-compose -f docker-compose.dev.yml down
 ```
+
+### Mongo DB
 
 Start db-only production stack, copy mongodb dump into the production container, attach to it and run mongorestore and stop the stack
 
@@ -49,12 +65,17 @@ $ docker exec -it wysiblocks_mongodb bash
 $ docker-compose -f docker-compose.db-only.yml down
 ```
 
-Start the full stack and copy Strapi's public folder into it's container
+### Run production stack
 
 ```
 $ docker-compose -f docker-compose.full-stack.yml up -d
+```
 
-$ docker cp public wysiblocks_strapi_cms:/app/
+### Import Strapi public folder
+
+```
+
+$ docker cp .\strapi\public wysiblocks_strapi_cms:/app/
 ```
 
 ## SSH
@@ -141,4 +162,9 @@ $ docker cp public wysiblocks_strapi_cms:/app/
    // change owner of .ssh folder
 
    $ sudo chown -R user_stories:user_stories /home/user_storie s
+   ```
+
+4. Add your user to docker user group
+   ```
+   $ sudo usermod -aG docker ${USER}
    ```
