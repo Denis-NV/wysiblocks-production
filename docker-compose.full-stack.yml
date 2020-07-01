@@ -1,93 +1,110 @@
 version: "3"
 services:
-  # Database, sgared between keycloak and wordpress
-  mysqldb:
-    container_name: wysiblocks_mysqldb
+  # Front facing Nginx reverse proxy server
+  reverse-proxy:
+    container_name: wysiblocks_reverse_proxy
     restart: unless-stopped
-    image: mysql:5.7
+    image: nginx:1.18.0
     volumes:
-      - mysqldbdata:/var/lib/mysql
-    environment:
-      - MYSQL_ROOT_PASSWORD=user_stories_root
-      - MYSQL_DATABASE=keycloak
-      - MYSQL_USER=keycloak
-      - MYSQL_PASSWORD=user_stories_keycloak
-    networks:
-      - backend
-
-  # Standalone authentication server
-  keycloak:
-    container_name: wysiblocks_keycloak
-    restart: unless-stopped
-    depends_on:
-      - mysqldb
-    image: denisnv/wysiblocks_keycloak:latest
-    volumes:
-      - ./keycloak_exports/wysiblocks_realm.json:/tmp/wysiblocks_realm.json
+      # - ./reverse_proxy/conf.d:/etc/nginx/conf.d/
+      - ./reverse_proxy/nginx.conf:/etc/nginx/nginx.conf
+      - ./reverse_proxy/ssl:/etc/nginx/ssl/
+      - ./reverse_proxy/placeholder_public:/usr/share/nginx/html/
     ports:
-      - 8080:8080
-    environment:
-      - KEYCLOAK_USER=user_stories
-      - KEYCLOAK_PASSWORD=user_stories_root
-      - DB_VENDOR=mysql
-      - DB_ADDR=mysqldb
-      - DB_DATABASE=keycloak
-      - DB_USER=keycloak
-      - DB_PASSWORD=user_stories_keycloak
-      - KEYCLOAK_IMPORT=/tmp/wysiblocks_realm.json
+      - 443:443
+      - 80:80
     networks:
+      - frontend
       - backend
 
-  # Database, sgared between strapi and core API
-  mongodb:
-    image: mongo:4.2.6-bionic
-    container_name: wysiblocks_mongodb
-    restart: unless-stopped
-    command: mongod --auth
-    environment:
-      - MONGO_INITDB_ROOT_USERNAME=user_stories
-      - MONGO_INITDB_ROOT_PASSWORD=user_stories_root
-      - MONGODB_DATA_DIR=/data/db
-      - MONGODB_LOG_DIR=/dev/null
-    volumes:
-      - mongodbdata:/data/db
-    networks:
-      - backend
-    # This is only required for connecting to the remote db from another origin
-    # ports:
-    #   - 27017:27017
+  # # Database, sgared between keycloak and wordpress
+  # mysqldb:
+  #   container_name: wysiblocks_mysqldb
+  #   restart: unless-stopped
+  #   image: mysql:5.7
+  #   volumes:
+  #     - mysqldbdata:/var/lib/mysql
+  #   environment:
+  #     - MYSQL_ROOT_PASSWORD=user_stories_root
+  #     - MYSQL_DATABASE=keycloak
+  #     - MYSQL_USER=keycloak
+  #     - MYSQL_PASSWORD=user_stories_keycloak
+  #   networks:
+  #     - backend
 
-  # Open source Headless CMS with customizable APIs
-  strapi_cms:
-    container_name: wysiblocks_strapi_cms
-    restart: unless-stopped
-    depends_on:
-      - mongodb
-    image: denisnv/wysiblocks_strapi_cms:latest
-    volumes:
-      - strapi_public:/app/public/
-    ports:
-      - "1337:1337"
-    environment:
-      - DATABASE_HOST=mongodb
-      - DATABASE_PORT=27017
-      - DATABASE_NAME=strapi_cms
-      - DATABASE_USERNAME=strapi
-      - DATABASE_PASSWORD=user_stories_strapi
-      - AUTHENTICATION_DATABASE=strapi_cms
-    networks:
-      - backend
+  # # Standalone authentication server
+  # keycloak:
+  #   container_name: wysiblocks_keycloak
+  #   restart: unless-stopped
+  #   depends_on:
+  #     - mysqldb
+  #   image: denisnv/wysiblocks_keycloak:latest
+  #   volumes:
+  #     - ./keycloak_exports/wysiblocks_realm.json:/tmp/wysiblocks_realm.json
+  #   ports:
+  #     - 8080:8080
+  #   environment:
+  #     - KEYCLOAK_USER=user_stories
+  #     - KEYCLOAK_PASSWORD=user_stories_root
+  #     - DB_VENDOR=mysql
+  #     - DB_ADDR=mysqldb
+  #     - DB_DATABASE=keycloak
+  #     - DB_USER=keycloak
+  #     - DB_PASSWORD=user_stories_keycloak
+  #     - KEYCLOAK_IMPORT=/tmp/wysiblocks_realm.json
+  #   networks:
+  #     - backend
+
+  # # Database, sgared between strapi and core API
+  # mongodb:
+  #   image: mongo:4.2.6-bionic
+  #   container_name: wysiblocks_mongodb
+  #   restart: unless-stopped
+  #   command: mongod --auth
+  #   environment:
+  #     - MONGO_INITDB_ROOT_USERNAME=user_stories
+  #     - MONGO_INITDB_ROOT_PASSWORD=user_stories_root
+  #     - MONGODB_DATA_DIR=/data/db
+  #     - MONGODB_LOG_DIR=/dev/null
+  #   volumes:
+  #     - mongodbdata:/data/db
+  #   networks:
+  #     - backend
+  #   # This is only required for connecting to the remote db from another origin
+  #   # ports:
+  #   #   - 27017:27017
+
+  # # Open source Headless CMS with customizable APIs
+  # strapi_cms:
+  #   container_name: wysiblocks_strapi_cms
+  #   restart: unless-stopped
+  #   depends_on:
+  #     - mongodb
+  #   image: denisnv/wysiblocks_strapi_cms:latest
+  #   volumes:
+  #     - strapi_public:/app/public/
+  #   ports:
+  #     - "1337:1337"
+  #   environment:
+  #     - DATABASE_HOST=mongodb
+  #     - DATABASE_PORT=27017
+  #     - DATABASE_NAME=strapi_cms
+  #     - DATABASE_USERNAME=strapi
+  #     - DATABASE_PASSWORD=user_stories_strapi
+  #     - AUTHENTICATION_DATABASE=strapi_cms
+  #   networks:
+  #     - backend
 
 networks:
-  # frontend:
-  #   driver: bridge
+  frontend:
+    driver: bridge
   backend:
     driver: bridge
 
-volumes:
-  mongodbdata:
-    driver: local
-  mysqldbdata:
-    driver: local
-  strapi_public:
-    driver: local
+# volumes:
+#   mongodbdata:
+#     driver: local
+#   mysqldbdata:
+#     driver: local
+#   strapi_public:
+#     driver: local

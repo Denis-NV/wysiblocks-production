@@ -168,3 +168,11 @@ $ docker cp .\strapi\public wysiblocks_strapi_cms:/app/
    ```
    $ sudo usermod -aG docker ${USER}
    ```
+
+## SSL sertificates
+
+```
+$ openssl req -x509 -days 10 -nodes -newkey rsa:2048 -keyout ssl/self.key -out ssl/self.crt
+
+$ openssl dhparam 2048 -out dhparam.pem
+```
