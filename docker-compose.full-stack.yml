@@ -4,18 +4,32 @@ services:
   reverse-proxy:
     container_name: wysiblocks_reverse_proxy
     restart: unless-stopped
-    image: nginx:1.18.0
+    # maybe switch to alpine image in the end
+    image: nginx:1.18.0 
     volumes:
-      # - ./reverse_proxy/conf.d:/etc/nginx/conf.d/
       - ./reverse_proxy/nginx.conf:/etc/nginx/nginx.conf
-      - ./reverse_proxy/ssl:/etc/nginx/ssl/
+      - ./reverse_proxy/dhparam:/etc/ssl/certs/
       - ./reverse_proxy/placeholder_public:/usr/share/nginx/html/
+      - certbot-etc:/etc/letsencrypt
+      - certbot-var:/var/lib/letsencrypt
     ports:
       - 443:443
       - 80:80
     networks:
       - frontend
       - backend
+
+  # letsencrypt free SSL crtificates 
+  certbot:
+    image: certbot/certbot
+    container_name: certbot
+    volumes:
+      - ./reverse_proxy/placeholder_public:/var/www/html/
+      - certbot-etc:/etc/letsencrypt
+      - certbot-var:/var/lib/letsencrypt
+    depends_on:
+      - reverse-proxy
+    command: certonly --webroot --webroot-path=/var/www/html --email denisnv@gmail.com --agree-tos --no-eff-email --staging -d userstories.dev  -d www.userstories.dev
 
   # # Database, sgared between keycloak and wordpress
   # mysqldb:
@@ -101,7 +115,11 @@ networks:
   backend:
     driver: bridge
 
-# volumes:
+volumes:
+  certbot-etc:
+    driver: local
+  certbot-var:
+    driver: local
 #   mongodbdata:
 #     driver: local
 #   mysqldbdata:
