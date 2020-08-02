@@ -1,0 +1,31 @@
+version: '3'
+
+services:
+  reverse-proxy:
+    image: nginx:1.18.0
+    container_name: reverse-proxy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./reverse_proxy/placeholder_public:/usr/share/nginx/html/
+      - ./ssl/nginx-conf:/etc/nginx/conf.d
+      - ./ssl/certbot-etc:/etc/letsencrypt
+      - ./ssl/certbot-var:/var/lib/letsencrypt
+    networks:
+      - backend
+
+  certbot:
+    image: certbot/certbot
+    container_name: certbot
+    volumes:
+      - ./reverse_proxy/placeholder_public:/usr/share/nginx/html/
+      - ./ssl/certbot-etc:/etc/letsencrypt
+      - ./ssl/certbot-var:/var/lib/letsencrypt
+    depends_on:
+      - reverse-proxy
+    command: certonly --webroot --webroot-path=/usr/share/nginx/html/ --email denisnv@userstories.dev --agree-tos --no-eff-email --staging -d userstories.dev  -d www.userstories.dev
+
+networks:
+  backend:
+    driver: bridge

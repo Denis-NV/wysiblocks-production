@@ -1,5 +1,108 @@
 # wysiblocks-production
 
+## Prep the Ubuntu server on DO
+
+1. SSH into the server
+   ```
+   $ shh root@178.62.16.248
+   ```
+2. Update / Upgrade all the packages
+   ```
+   $ sudo apt update
+   $ sudo apt upgrade
+   ```
+3. Create a new user with root prveliges
+
+   ```
+   $ adduser user_stories
+
+   $ usermod -aG sudo user_stories
+
+   $ cd /home/user_stories/
+
+   $ mkdir .ssh
+
+   $ cd .ssh
+
+   $ touch authorized_keys
+
+   $ sudo nano authorized_keys
+   // paste the public part of ssh key you created for DO
+
+   $ sudo nano /etc/ssh/sshd_config
+
+   // change value
+   PermitRootLogin no
+
+   $ sudo systemctl reload sshd
+
+   // change owner of .ssh folder
+
+   $ sudo chown -R user_stories:user_stories /home/user_storie s
+   ```
+
+4. Add your user to docker user group
+   ```
+   $ sudo usermod -aG docker ${USER}
+   ```
+
+## SSL sertificates
+
+### Prepare the cerificates
+
+SSL certbot Let's Encrypt solution, based on the following article, with come customization:
+
+https://www.digitalocean.com/community/tutorials/how-to-secure-a-containerized-node-js-application-with-nginx-let-s-encrypt-and-docker-compose
+
+
+Run ssl docker-compose minimal configuration that will include our domain name, document root, proxy information, and a location block to direct Certbot’s requests to the .well-known directory, where it will place a temporary file to validate that the DNS for our domain resolves to our server.
+
+```
+$ docker-compose -f docker-compose.ssl.yml up -d
+
+$ docker-compose -f docker-compose.ssl.yml ps
+
+$ docker-compose -f docker-compose.ssl.yml logs certbot
+```
+
+It will also allow us to use Certbot’s webroot plugin to obtain certificates for our domain. This plugin depends on the HTTP-01 validation method, which uses an HTTP request to prove that Certbot can access resources from a server that responds to a given domain name.
+
+Comands to manage certbot SSL certificates after the full-stack was started
+
+```
+$ docker-compose -f docker-compose.full-stack.yml ps
+
+$ docker-compose -f docker-compose.full-stack.yml logs certbot
+
+$ docker-compose -f docker-compose.full-stack.yml up --force-recreate --no-deps reverse-proxy
+
+$ docker-compose -f docker-compose.full-stack.yml exec reverse-proxy ls -la /etc/letsencrypt/live
+```
+
+Servises to check website security ratings
+
+```
+https://www.ssllabs.com/ssltest/analyze.html?d=www.userstories.dev
+
+https://securityheaders.com/?q=https%3A%2F%2Fwww.userstories.dev%2F&followRedirects=on
+```
+
+### Setup cron job to renew certificates
+
+Open crontab file
+
+```
+$ sudo crontab -e
+```
+
+Add the following line to run the cron job daily
+
+```
+...
+0 12 * * * /home/user_stories/wysiblocks-production/ssl_renew.sh >> /var/log/cron.log 2>&1
+```
+
+
 ## Backup dev data / assets if you wish to transfer them to production
 
 Make sure full dev container stack is up and running. To make sure it does and double check by running
@@ -122,57 +225,3 @@ $ docker cp .\strapi\public wysiblocks_strapi_cms:/app/
    ```
    $ cat C:\Unsynced\software_dev/.ssh/id_rsa_do.pub
    ```
-
-## Prep the Ubuntu server on DO
-
-1. SSH into the server
-   ```
-   $ shh root@178.62.16.248
-   ```
-2. Update / Upgrade all the packages
-   ```
-   $ sudo apt update
-   $ sudo apt upgrade
-   ```
-3. Create a new user with root prveliges
-
-   ```
-   $ adduser user_stories
-
-   $ usermod -aG sudo user_stories
-
-   $ cd /home/user_stories/
-
-   $ mkdir .ssh
-
-   $ cd .ssh
-
-   $ touch authorized_keys
-
-   $ sudo nano authorized_keys
-   // paste the public part of ssh key you created for DO
-
-   $ sudo nano /etc/ssh/sshd_config
-
-   // change value
-   PermitRootLogin no
-
-   $ sudo systemctl reload sshd
-
-   // change owner of .ssh folder
-
-   $ sudo chown -R user_stories:user_stories /home/user_storie s
-   ```
-
-4. Add your user to docker user group
-   ```
-   $ sudo usermod -aG docker ${USER}
-   ```
-
-## SSL sertificates
-
-```
-$ openssl req -x509 -days 10 -nodes -newkey rsa:2048 -keyout ssl/self.key -out ssl/self.crt
-
-$ openssl dhparam 2048 -out dhparam.pem
-```
