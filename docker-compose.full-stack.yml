@@ -29,8 +29,8 @@ services:
       - ./ssl/certbot-var:/var/lib/letsencrypt
     depends_on:
       - reverse-proxy
-    command: certonly --webroot --webroot-path=/usr/share/nginx/html/ --email denisnv@userstories.dev --agree-tos --no-eff-email --keep-until-expiring -d userstories.dev  -d www.userstories.dev
-    # command: certonly --webroot --webroot-path=/usr/share/nginx/html/ --email denisnv@userstories.dev --agree-tos --no-eff-email --keep-until-expiring --staging -d userstories.dev  -d www.userstories.dev
+    command: certonly --webroot --webroot-path=/usr/share/nginx/html/ --email denisnv@userstories.dev --agree-tos --no-eff-email --keep-until-expiring --expand -d userstories.dev  -d www.userstories.dev -d backend.userstories.dev -d auth.userstories.dev
+    # command: certonly --webroot --webroot-path=/usr/share/nginx/html/ --email denisnv@userstories.dev --agree-tos --no-eff-email --keep-until-expiring --staging --expand -d userstories.dev  -d www.userstories.dev -d backend.userstories.dev -d auth.userstories.dev
     networks:
       - backend
 
@@ -72,45 +72,45 @@ services:
   #   networks:
   #     - backend
 
-  # # Database, sgared between strapi and core API
-  # mongodb:
-  #   image: mongo:4.2.6-bionic
-  #   container_name: wysiblocks_mongodb
-  #   restart: unless-stopped
-  #   command: mongod --auth
-  #   environment:
-  #     - MONGO_INITDB_ROOT_USERNAME=user_stories
-  #     - MONGO_INITDB_ROOT_PASSWORD=user_stories_root
-  #     - MONGODB_DATA_DIR=/data/db
-  #     - MONGODB_LOG_DIR=/dev/null
-  #   volumes:
-  #     - mongodbdata:/data/db
-  #   networks:
-  #     - backend
-  #   # This is only required for connecting to the remote db from another origin
-  #   # ports:
-  #   #   - 27017:27017
+  # Database, sgared between strapi and core API
+  mongodb:
+    image: mongo:4.2.6-bionic
+    container_name: wysiblocks_mongodb
+    restart: unless-stopped
+    command: mongod --auth
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=user_stories
+      - MONGO_INITDB_ROOT_PASSWORD=user_stories_root
+      - MONGODB_DATA_DIR=/data/db
+      - MONGODB_LOG_DIR=/dev/null
+    volumes:
+      - mongodbdata:/data/db
+    networks:
+      - backend
+    # This is only required for connecting to the remote db from another origin
+    # ports:
+    #   - 27017:27017
 
-  # # Open source Headless CMS with customizable APIs
-  # strapi_cms:
-  #   container_name: wysiblocks_strapi_cms
-  #   restart: unless-stopped
-  #   depends_on:
-  #     - mongodb
-  #   image: denisnv/wysiblocks_strapi_cms:latest
-  #   volumes:
-  #     - strapi_public:/app/public/
-  #   ports:
-  #     - "1337:1337"
-  #   environment:
-  #     - DATABASE_HOST=mongodb
-  #     - DATABASE_PORT=27017
-  #     - DATABASE_NAME=strapi_cms
-  #     - DATABASE_USERNAME=strapi
-  #     - DATABASE_PASSWORD=user_stories_strapi
-  #     - AUTHENTICATION_DATABASE=strapi_cms
-  #   networks:
-  #     - backend
+  # Open source Headless CMS with customizable APIs
+  strapi_cms:
+    container_name: wysiblocks_strapi_cms
+    restart: unless-stopped
+    depends_on:
+      - mongodb
+    image: denisnv/wysiblocks_strapi_cms:latest
+    volumes:
+      - strapi_public:/app/public/
+    ports:
+      - "1337:1337"
+    environment:
+      - DATABASE_HOST=mongodb
+      - DATABASE_PORT=27017
+      - DATABASE_NAME=strapi_cms
+      - DATABASE_USERNAME=strapi
+      - DATABASE_PASSWORD=user_stories_strapi
+      - AUTHENTICATION_DATABASE=strapi_cms
+    networks:
+      - backend
 
 networks:
   frontend:
@@ -118,10 +118,10 @@ networks:
   backend:
     driver: bridge
 
-# volumes:
-#   mongodbdata:
-#     driver: local
-#   mysqldbdata:
-#     driver: local
-#   strapi_public:
-#     driver: local
+volumes:
+  mongodbdata:
+    driver: local
+  mysqldbdata:
+    driver: local
+  strapi_public:
+    driver: local
